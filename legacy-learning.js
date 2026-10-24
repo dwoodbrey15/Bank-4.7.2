@@ -1,0 +1,10 @@
+(function(root){
+'use strict';
+const N=root.LegacyBankNet||(typeof require==='function'?require('./legacy-neural.js'):null),kinds=['fixed','adaptive','reactive','matcher','photo','random','teacher','chaser'];
+function evaluation(model,config,seed,index,reference=false){const setup=fixture(config,seed,index),n=setup.players,rounds=setup.rounds,s=new N.Game(N.hash(seed,index,61),n,rounds),random=N.rng(N.hash(seed,index,51)),seat=setup.seat,policies=Array.from({length:n},()=>({kind:kinds[Math.floor(random()*kinds.length)],base:[50,100,150,200,300,500,900][Math.floor(random()*7)]}));let decisions=0,milliseconds=0;
+ while(!s.finished){const actor=s.actor;let bank;if(actor===seat){if(reference)bank=N.teacher(s,actor);else{const began=typeof performance!=='undefined'?performance.now():Date.now(),proof=N.oracle(s,actor),bankChoice=proof?proof.action==='BANK':N.forward(model,N.features(s,actor)).p>=.5;milliseconds+=(typeof performance!=='undefined'?performance.now():Date.now())-began;decisions++;bank=bankChoice;}}else bank=N.heuristic(s,actor,policies[actor].kind,policies[actor].base,N.rng(N.hash(seed,index,s.round,1000+s.rolls*13+actor)));s.step(bank);}
+ return{players:n,rounds,seed:s.seed,baseSeed:seed,index,modelUpdates:model.updates,seat,win:s.returns()[seat],baseline:1/n,decisions,milliseconds,scores:s.players.map(p=>String(p.score))};
+}
+function fixture(config={},seed,index){const min=config.minPlayers??3,max=config.maxPlayers??8,rounds=config.rounds||[10,15,20];if(!Number.isInteger(min)||!Number.isInteger(max)||min<2||max>12||min>max||!rounds.length||rounds.some(r=>![10,15,20].includes(r))||!Number.isSafeInteger(index)||index<0)throw Error('Invalid benchmark setup.');const width=max-min+1,players=min+index%width,length=rounds[Math.floor(index/width)%rounds.length],cycle=Math.floor(index/(width*rounds.length)),seat=(cycle+N.hash(seed,players,length,71))%players;return{players,rounds:length,seat};}
+root.LegacyBankLearning={evaluation,fixture};if(typeof module!=='undefined')module.exports=root.LegacyBankLearning;
+})(typeof globalThis!=='undefined'?globalThis:this);

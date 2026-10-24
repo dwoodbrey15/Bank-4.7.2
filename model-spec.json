@@ -1,0 +1,109 @@
+{
+  "version": "4.7.2",
+  "architecture": "Independent feed-forward actor and critic; 58 inputs, no LSTM",
+  "inputs": {
+    "globals": [
+      "asinh(pot/100)/4",
+      "rounds/10-1",
+      "remainingRounds/20",
+      "(players-3)/5",
+      "(activePlayers-1)/(players-1)",
+      "asinh(dangerRolls)/4",
+      "asinh(highestRivalScoreMinusOwn/150)/4",
+      "strictLeadReachLower",
+      "strictLeadReachUpper",
+      "exactNextDangerRollStrictLeadProbability",
+      "safePhasePot/210, -1 if unknown",
+      "anyOpponentBanked",
+      "catchUpAfterBankLower",
+      "catchUpAfterBankUpper"
+    ],
+    "opponentSlots": 11,
+    "perOpponent": [
+      "asinh(scoreMinusOwn/150)/4",
+      "status: active1, banked0, absent-1",
+      "(observedContinues+1)/(observedContinues+observedBanks+2)",
+      "observationCount/(observationCount+8)"
+    ],
+    "total": 58,
+    "history": "Public choices within this game only. Count each decision to roll once, including before a bust. No inferred banking time. Counters follow player identity through rank sorting. Reset at new game."
+  },
+  "sizes": {
+    "Small": {
+      "hidden": 16,
+      "parameters": 1922,
+      "default": true
+    },
+    "Normal": {
+      "hidden": 32,
+      "parameters": 3842
+    },
+    "Large": {
+      "hidden": 128,
+      "parameters": 15362
+    }
+  },
+  "probabilities": {
+    "featureExactTargetLimit": 16384,
+    "cacheTables": 32,
+    "largeTargets": "Existing rigorous lower and upper bounds. Both returned to network; not silently presented as exact.",
+    "meaning": "Probability that pot reaches a fixed strict-lead target before bust, not probability of winning.",
+    "opponentPolicies": "Classic personality logic and frozen banknet-2 champion use their original exact/bounded calculations and proven rules.",
+    "catchUp": "min over active opponents of ownScore+pot-opponentScore, with equality counting as a catch. Use one shared-pot hitting probability: exact through16384, lower/upper beyond. No active opponent returns0; already reachable returns1. Not a probability of losing or a forecast of opponent actions."
+  },
+  "training": {
+    "games": 432,
+    "optimizer": "Unchanged constant-rate Adam beta1 .9 beta2 .999 epsilon1e-8; no decay, warmup, gradient clipping or KL stop/rollback guard",
+    "epochs": 2,
+    "optimizerPositions": 1728,
+    "microbatch": 288,
+    "syntheticStarts": "10%, no invented history; safe-phase starting pot marked unknown",
+    "memory": "Feed-forward public history summaries; no recurrent state or sequence training"
+  },
+  "benchmarks": {
+    "scripts": "bankbench-46, unchanged fixtures and opponent behavior; older checkpoints imported as comparison references",
+    "challenge": "bankbench-classic-champion-1: exactly one frozen 16,272-game champion per table, remaining seats balanced over eight classic families, at most two per family. Training uses identical roster distribution.",
+    "retention": "Existing paired/fresh best-model validation, no automatic training rewinds"
+  },
+  "compatibility": "56-input compact checkpoints upgrade automatically, zero-inserting both feature weights and Adam moments in actor/critic input layers. Preserve all prior outputs, counters, optimizer step, champions and reports. Old save slots untouched. Earlier88-input models remain comparison references. Existing compact slots are copied into separate classic-training slots; previous challenge results archived and saved best revalidated on the new suite.",
+  "runtime": "Offline JS Float32 Web Workers, 2\u201312 players, 10/15/20 rounds",
+  "claims": "Functional validation only. No evidence yet that compact inputs improve playing strength.",
+  "opponents": {
+    "champion": {
+      "name": "Old champion \u00b7 16,272 games",
+      "schema": "banknet-2",
+      "games": 16272,
+      "updates": 339,
+      "sourceCheckpointSHA256": "74eaddea93b45cffe505f5f86687715279a4d7115b7db74f8e0d7abb83726392",
+      "modelSHA256": "88245f9cd4644ba3716a3e1ef1b49caf967d0e69214755b4a7e733d3218032a0",
+      "frozen": true,
+      "selection": "Protected best that won 10/24 original games and 37/96 latest four-way games"
+    },
+    "championsPerTable": 1,
+    "classicFamilies": [
+      "fixed",
+      "adaptive",
+      "reactive",
+      "matcher",
+      "photo",
+      "random",
+      "teacher",
+      "chaser"
+    ],
+    "classicBases": [
+      50,
+      100,
+      150,
+      200,
+      300,
+      500,
+      900
+    ],
+    "maximumPerClassicFamily": 2,
+    "default432GameSeats": {
+      "champion": 432,
+      "eachClassicFamily": 189
+    },
+    "history": "Full original public-choice observations maintained for the old champion; compact features unchanged."
+  }
+}
